@@ -26,6 +26,7 @@ add_compile_options(-Wall -Wpedantic)
 # ---------------------------------------------------------------------------
 add_library(hepmc_phlex SHARED
   hepmc_phlex/GenEventGun.cpp
+  hepmc_phlex/GenEventSequence.cpp
 )
 
 target_include_directories(hepmc_phlex
@@ -51,6 +52,14 @@ target_link_libraries(hmp_gen_event_gun PRIVATE
 )
 target_compile_options(hmp_gen_event_gun PRIVATE -UNDEBUG)
 
+# The multi-event, multi-vertex sequence provider.
+add_library(hmp_gen_event_sequence MODULE modules/gen_event_sequence.cpp)
+target_link_libraries(hmp_gen_event_sequence PRIVATE
+  hepmc_phlex
+  phlex::source
+)
+target_compile_options(hmp_gen_event_sequence PRIVATE -UNDEBUG)
+
 # ---------------------------------------------------------------------------
 # Install rules
 # ---------------------------------------------------------------------------
@@ -68,6 +77,10 @@ install(DIRECTORY hepmc_phlex/
 )
 
 install(TARGETS hmp_gen_event_gun
+  LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+)
+
+install(TARGETS hmp_gen_event_sequence
   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 )
 

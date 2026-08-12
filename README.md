@@ -20,6 +20,16 @@ needed (and downstream nodes need not depend on this package for the type).
   `hmp_gen_event_gun`, i.e. `cpp: 'hmp_gen_event_gun'` in a workflow), producing
   one `GenEvent` per data cell.
 
+- **`GenEventSequence`** (`hepmc_phlex/GenEventSequence.hpp`) — a multi-event,
+  multi-vertex generalization of `GenEventGun`.  It holds an ordered **list of
+  events**; for phlex event number *N* it emits the *N*-th configured event as a
+  single `GenEvent`, where each event is a list of particle entries and each
+  entry becomes one `GenVertex` (so one event can contain several tracks at
+  different positions, times and directions).  Registered as a Phlex **source
+  (provider)** node in `modules/gen_event_sequence.cpp` (module library
+  `hmp_gen_event_sequence`, i.e. `cpp: 'hmp_gen_event_sequence'`).  Drive it with
+  a driver layer whose `total` equals the number of configured events.
+
 ## `GenEventGun` configuration schema
 
 The gun mirrors `G4ParticleGun`'s setters.  Configuration is **parsed and
@@ -90,6 +100,71 @@ is produced.
   number: 1,
   momentum_unit: 'MeV',
   length_unit: 'mm',
+}
+```
+
+## `GenEventSequence` configuration schema
+
+`GenEventSequence` reuses `GenEventGun`'s per-particle kinematics contract but
+wraps it in an event list.  Configuration is parsed and validated in the
+constructor.
+
+### Module keys (consumed by the module wrapper)
+
+| key             | type   | required | default      | meaning                             |
+|-----------------|--------|----------|--------------|-------------------------------------|
+| `output_layer`  | string | yes      | —            | Phlex layer for the emitted product |
+| `output_suffix` | string | no       | `"genevent"` | product suffix                      |
+
+### Sequence keys (consumed by `GenEventSequence`)
+
+| key             | type            | required | default | meaning                                           |
+|-----------------|-----------------|----------|---------|---------------------------------------------------|
+| `momentum_unit` | string          | no       | `"MeV"` | `"MeV"` or `"GeV"`; shared by the whole sequence  |
+| `length_unit`   | string          | no       | `"mm"`  | `"mm"` or `"cm"`; shared by the whole sequence    |
+| `events`        | list of objects | **yes**  | —       | ordered per-event list (non-empty)                |
+
+Each **event** is an object with one key:
+
+| key         | type            | required | meaning                                                  |
+|-------------|-----------------|----------|----------------------------------------------------------|
+| `particles` | list of objects | **yes**  | one or more particle entries; each becomes a `GenVertex` |
+
+Each **particle** entry accepts the same identity / vertex / kinematics keys as
+`GenEventGun` (`pdg`, `mass`, `number`, `position`, plus **exactly one** of
+`momentum` or `energy`+`direction`), with one difference in the time key:
+
+| key         | type   | required | default | meaning                                                    |
+|-------------|--------|----------|---------|------------------------------------------------------------|
+| `time`      | double | no       | `0.0`   | vertex time, a **physical** time in `time_unit`            |
+| `time_unit` | string | no       | `"ns"`  | `"ns"`, `"us"`, `"ms"` or `"s"`                            |
+
+The vertex time is converted internally to the HepMC position-4-vector
+convention (`c·t` in `length_unit`), so time offsets can be written in natural
+units (unlike `GenEventGun`, whose raw `time` is already `c·t`).
+
+`operator()(N)` throws if `N` is outside the configured `events` list, so set
+the driver layer `total` to the number of events.
+
+### Example (Jsonnet)
+
+```jsonnet
+{
+  cpp: 'hmp_gen_event_sequence',
+  output_layer: 'event',
+  momentum_unit: 'MeV',
+  length_unit: 'mm',
+  events: [
+    // event 0: one 1 GeV muon along +z
+    { particles: [
+      { pdg: 13, mass: 105.658, energy: 1000.0, direction: [0, 0, 1], position: [-1000, 2000, 0] },
+    ] },
+    // event 1: two tracks (two vertices) offset in space and time
+    { particles: [
+      { pdg: 13, mass: 105.658, energy: 100.0, direction: [0, 1,  1], position: [-1000, 2000, 2000], time: 0,   time_unit: 'us' },
+      { pdg: 13, mass: 105.658, energy: 100.0, direction: [0, 1, -1], position: [-1400, 2000, 2000], time: 250, time_unit: 'us' },
+    ] },
+  ],
 }
 ```
 
