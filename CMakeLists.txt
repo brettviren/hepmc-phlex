@@ -7,15 +7,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-# WORKAROUND (remove per ddm-ovy once Framework-R-D/phlex#656 ships): phlexConfig
-# does not find_dependency() its transitive deps, but phlexTargets references the
-# spdlog::spdlog, TBB::tbb and fmt::fmt imported targets.  Create them BEFORE
-# find_package(phlex) or its Targets file errors ("target not found").
-find_package(Boost REQUIRED COMPONENTS json)
-find_package(TBB REQUIRED)
-find_package(spdlog REQUIRED)
-find_package(fmt REQUIRED)
-find_package(phlex REQUIRED)
+# phlex >= 0.4.1: its config now find_dependency()s Boost/TBB/fmt/spdlog/GSL
+# (Framework-R-D/phlex#656 shipped), so the old pre-find workaround is gone.
+find_package(phlex 0.4.1 REQUIRED)
 find_package(HepMC3 REQUIRED)
 
 add_compile_options(-Wall -Wpedantic)

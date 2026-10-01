@@ -48,5 +48,5 @@ PHLEX_REGISTER_PROVIDERS(m, config)
               [gun](data_cell_index const& id) -> HepMC3::GenEvent {
                   return (*gun)(static_cast<std::size_t>(id.number()));
               })
-      .output_product("input", experimental::identifier{suffix}, experimental::identifier{layer});
+      .output_product("input", suffix.c_str(), layer.c_str());  // char const* -> identifier (public)
 }
